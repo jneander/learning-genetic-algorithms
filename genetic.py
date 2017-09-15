@@ -40,21 +40,29 @@ def _generate_parent(length, geneSet, get_fitness):
     fitness = get_fitness(genes)
     return Chromosome(genes, fitness)
 
+def _get_improvement(new_child, generate_parent):
+    bestParent = generate_parent()
+    yield bestParent
+    while True:
+        child = new_child(bestParent)
+        if bestParent.Fitness > child.Fitness:
+            continue # we got worse; move on to the next iteration
+        if not child.Fitness > bestParent.Fitness:
+            bestParent = child
+            continue # not better, but swap in case it helps progress
+        yield child
+        bestParent = child
+
 def get_best(get_fitness, targetLen, optimalFitness, geneSet, display):
     random.seed()
-    bestParent = _generate_parent(targetLen, geneSet, get_fitness)
-    display(bestParent)
-    if bestParent.Fitness >= optimalFitness:
-        return bestParent
 
-    while True:
-        child = _mutate(bestParent, geneSet, get_fitness)
+    def fnMutate(parent):
+        return _mutate(parent, geneSet, get_fitness)
 
-        if bestParent.Fitness >= child.Fitness:
-            # we have not improved; no sense in showing this guess
-            continue
-        display(child)
-        if child.Fitness >= optimalFitness:
-            # we guessed correctly
-            return child
-        bestParent = child
+    def fnGenerateParent():
+        return _generate_parent(targetLen, geneSet, get_fitness)
+
+    for improvement in _get_improvement(fnMutate, fnGenerateParent):
+        display(improvement)
+        if not optimalFitness > improvement.Fitness:
+            return improvement
