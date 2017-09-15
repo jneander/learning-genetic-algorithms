@@ -8,7 +8,7 @@ def get_fitness(genes, target):
 
 def display(candidate, startTime):
     timeDiff = datetime.datetime.now() - startTime
-    print("{}\t{}\t{}".format(candidate.Genes, candidate.Fitness, timeDiff))
+    print("{}\t{}\t{}".format(''.join(candidate.Genes), candidate.Fitness, timeDiff))
 
 class GuessPasswordTests(unittest.TestCase):
     geneSet = " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!."
@@ -18,7 +18,7 @@ class GuessPasswordTests(unittest.TestCase):
         self.guess_password(target)
 
     def test_Random(self):
-        length = 150
+        length = 15
         target = ''.join(random.choice(self.geneSet) for _ in range(length))
         self.guess_password(target)
 
@@ -36,7 +36,7 @@ class GuessPasswordTests(unittest.TestCase):
 
         optimalFitness = len(target)
         best = genetic.get_best(fnGetFitness, len(target), optimalFitness, self.geneSet, fnDisplay)
-        self.assertEqual(best.Genes, target)
+        self.assertEqual(''.join(best.Genes), target)
 
 if __name__ == '__main__':
     unittest.main()
