@@ -61,7 +61,7 @@ def _get_improvement(new_child, generate_parent):
         yield child
         bestParent = child
 
-def get_best(get_fitness, targetLen, optimalFitness, geneSet, display, custom_mutate=None):
+def get_best(get_fitness, targetLen, optimalFitness, geneSet, display, custom_mutate=None, custom_create=None):
     random.seed()
 
     if custom_mutate is None:
@@ -71,8 +71,13 @@ def get_best(get_fitness, targetLen, optimalFitness, geneSet, display, custom_mu
         def fnMutate(parent):
             return _mutate_custom(parent, custom_mutate, get_fitness)
 
-    def fnGenerateParent():
-        return _generate_parent(targetLen, geneSet, get_fitness)
+    if custom_create is None:
+        def fnGenerateParent():
+            return _generate_parent(targetLen, geneSet, get_fitness)
+    else:
+        def fnGenerateParent():
+            genes = custom_create()
+            return Chromosome(genes, get_fitness(genes))
 
     for improvement in _get_improvement(fnMutate, fnGenerateParent):
         display(improvement)
