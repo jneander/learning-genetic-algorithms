@@ -1,3 +1,5 @@
+from bisect import bisect_left
+from math import exp
 import random
 import statistics
 import sys
@@ -25,6 +27,7 @@ class Chromosome:
     def __init__(self, genes, fitness):
         self.Genes = genes
         self.Fitness = fitness
+        self.Age = 0
 
 def _mutate(parent, geneSet, get_fitness):
     childGenes = parent.Genes[:]
@@ -48,20 +51,41 @@ def _generate_parent(length, geneSet, get_fitness):
     fitness = get_fitness(genes)
     return Chromosome(genes, fitness)
 
-def _get_improvement(new_child, generate_parent):
-    bestParent = generate_parent()
+def _get_improvement(new_child, generate_parent, maxAge):
+    parent = bestParent = generate_parent()
     yield bestParent
+    historicalFitnesses = [bestParent.Fitness]
     while True:
-        child = new_child(bestParent)
-        if bestParent.Fitness > child.Fitness:
-            continue # we got worse; move on to the next iteration
+        child = new_child(parent)
+        if parent.Fitness > child.Fitness:
+            if maxAge is None:
+                continue # we got worse and are not pursuing lineage; move on to the next iteration
+            parent.Age += 1
+            if maxAge > parent.Age:
+                continue # we got worse, but have another chance; move on to the next iteration
+            index = bisect_left(historicalFitnesses, child.Fitness, 0, len(historicalFitnesses))
+            difference = len(historicalFitnesses) - index
+            proportionSimilar = difference / len(historicalFitnesses)
+            if random.random() < exp(-proportionSimilar): # the child was far from the best fitness
+                parent = child
+                continue
+            parent = bestParent
+            parent.Age = 0
+            continue
         if not child.Fitness > bestParent.Fitness:
-            bestParent = child
+            child.Age = parent.Age + 1
+            parent = child
             continue # not better, but swap in case it helps progress
-        yield child
-        bestParent = child
+        parent = child
+        parent.Age = 0
+        if child.Fitness > bestParent.Fitness:
+            yield child
+            bestParent = child
+            historicalFitnesses.append(child.Fitness)
 
-def get_best(get_fitness, targetLen, optimalFitness, geneSet, display, custom_mutate=None, custom_create=None):
+def get_best(
+        get_fitness, targetLen, optimalFitness, geneSet, display, custom_mutate=None, custom_create=None, maxAge=0
+        ):
     random.seed()
 
     if custom_mutate is None:
@@ -79,7 +103,7 @@ def get_best(get_fitness, targetLen, optimalFitness, geneSet, display, custom_mu
             genes = custom_create()
             return Chromosome(genes, get_fitness(genes))
 
-    for improvement in _get_improvement(fnMutate, fnGenerateParent):
+    for improvement in _get_improvement(fnMutate, fnGenerateParent, maxAge):
         display(improvement)
         if not optimalFitness > improvement.Fitness:
             return improvement
